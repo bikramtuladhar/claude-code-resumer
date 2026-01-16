@@ -6,7 +6,7 @@
 set -e
 
 VERSION="${1:-1.0.0}"
-USERNAME="${2:-YOUR_USERNAME}"
+USERNAME="${2:-bikramtuladhar}"
 FORMULA="homebrew/Formula/cs.rb"
 
 echo "Updating formula for v$VERSION from $USERNAME..."
@@ -36,7 +36,7 @@ sed -i.bak "s/SHA256_MACOS_ARM64/$SHA_MACOS_ARM64/g" "$FORMULA"
 sed -i.bak "s/SHA256_MACOS_INTEL/$SHA_MACOS_INTEL/g" "$FORMULA"
 sed -i.bak "s/SHA256_LINUX_X64/$SHA_LINUX_X64/g" "$FORMULA"
 sed -i.bak "s/SHA256_LINUX_ARM64/$SHA_LINUX_ARM64/g" "$FORMULA"
-sed -i.bak "s/YOUR_USERNAME/$USERNAME/g" "$FORMULA"
+sed -i.bak "s/bikramtuladhar/$USERNAME/g" "$FORMULA"
 rm -f "$FORMULA.bak"
 
 echo ""
