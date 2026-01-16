@@ -1,0 +1,18 @@
+[package]
+name = "cs"
+version = "1.0.0"
+edition = "2021"
+description = "Claude Code Session Manager - deterministic sessions based on folder+branch"
+repository = "https://github.com/YOUR_USERNAME/claude-session-manager"
+license = "MIT"
+keywords = ["claude", "cli", "session", "developer-tools"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+sha1 = "0.10"
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "z"
+codegen-units = 1
