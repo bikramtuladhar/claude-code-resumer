@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.0 (2026-01-17)
+
+
+### Features
+
+* add release automation with Release Please ([6771fbf](https://github.com/bikramtuladhar/claude-code-resumer/commit/6771fbf24a0e159c66aefb16fd1fd0eac56d39e4))
+
 ## [Unreleased]
 
 ### Added
