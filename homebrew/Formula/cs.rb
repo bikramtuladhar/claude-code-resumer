@@ -5,14 +5,14 @@ class Cs < Formula
   desc "Claude Code Session Manager - deterministic sessions based on folder+branch"
   homepage "https://github.com/bikramtuladhar/claude-code-resumer"
   # x-release-please-start-version
-  version "0.1.0"
+  version "0.1.1"
   # x-release-please-end
   license "MIT"
 
   on_macos do
     on_arm do
       url "https://github.com/bikramtuladhar/claude-code-resumer/releases/download/v#{version}/cs-macos-arm64"
-      sha256 "36e7b1abd627572152f47b603f17a8930897518dcd5a29932edc900033369e54"
+      sha256 "a9a58da2e48c1ae43059d5fab714f1cc4a2012fd46cfd32bc308772f5a8ca02d"
 
       def install
         bin.install "cs-macos-arm64" => "cs"
@@ -21,7 +21,7 @@ class Cs < Formula
 
     on_intel do
       url "https://github.com/bikramtuladhar/claude-code-resumer/releases/download/v#{version}/cs-macos-intel"
-      sha256 "0953f1fc5eeae008c6bed85c8bdcc55db8262a984e92cef18e8188d545e1abe4"
+      sha256 "f9ba34e8cae43402eb68a8a3732ab76a295b2a061a976786ed1a735260954276"
 
       def install
         bin.install "cs-macos-intel" => "cs"
@@ -32,7 +32,7 @@ class Cs < Formula
   on_linux do
     on_arm do
       url "https://github.com/bikramtuladhar/claude-code-resumer/releases/download/v#{version}/cs-linux-arm64"
-      sha256 "13b8bf617984d1fd4713dcc705cf66c50cc9c6a16dd6a831ff752332de1e0bfa"
+      sha256 "e3ee57579ba726bb71341e4b50e1d2193ad531f91d08dca260a645c45025e077"
 
       def install
         bin.install "cs-linux-arm64" => "cs"
@@ -41,7 +41,7 @@ class Cs < Formula
 
     on_intel do
       url "https://github.com/bikramtuladhar/claude-code-resumer/releases/download/v#{version}/cs-linux-x64"
-      sha256 "06a1b87f1951b58d3200b8e4c5fc3e47f76c62edd69a71a3ee877ff49258e4f6"
+      sha256 "6cabefcf4d28a40e8ce91bfb1bb68290554752591a04d1991d43da4d14a3fefb"
 
       def install
         bin.install "cs-linux-x64" => "cs"
