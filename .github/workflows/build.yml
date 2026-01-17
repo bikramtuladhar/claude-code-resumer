@@ -172,14 +172,14 @@ jobs:
           echo "  Linux x64:   $SHA_LINUX_X64"
 
           # Update the homebrew formula
-          sed -i "s/version \".*\"/version \"$VERSION_NUM\"/" homebrew/Formula/cs.rb
-          sed -i "s/SHA256_MACOS_ARM64/$SHA_MACOS_ARM64/" homebrew/Formula/cs.rb
-          sed -i "s/SHA256_MACOS_INTEL/$SHA_MACOS_INTEL/" homebrew/Formula/cs.rb
-          sed -i "s/SHA256_LINUX_ARM64/$SHA_LINUX_ARM64/" homebrew/Formula/cs.rb
-          sed -i "s/SHA256_LINUX_X64/$SHA_LINUX_X64/" homebrew/Formula/cs.rb
+          sed -i "s/version \".*\"/version \"$VERSION_NUM\"/" Formula/cs.rb
+          sed -i "s/SHA256_MACOS_ARM64/$SHA_MACOS_ARM64/" Formula/cs.rb
+          sed -i "s/SHA256_MACOS_INTEL/$SHA_MACOS_INTEL/" Formula/cs.rb
+          sed -i "s/SHA256_LINUX_ARM64/$SHA_LINUX_ARM64/" Formula/cs.rb
+          sed -i "s/SHA256_LINUX_X64/$SHA_LINUX_X64/" Formula/cs.rb
 
           # Also handle if SHA256 was already a hash (for updates)
-          sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"NEW_HASH\"/g" homebrew/Formula/cs.rb
+          sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"NEW_HASH\"/g" Formula/cs.rb
 
           # Re-insert the correct hashes in order (macOS ARM, macOS Intel, Linux ARM, Linux x64)
           # This is done with a temp file approach to handle the ordering
@@ -193,7 +193,7 @@ jobs:
               else if (count == 4) sub(/NEW_HASH/, lx64)
             }
             { print }
-          ' homebrew/Formula/cs.rb > homebrew/Formula/cs.rb.tmp && mv homebrew/Formula/cs.rb.tmp homebrew/Formula/cs.rb
+          ' Formula/cs.rb > Formula/cs.rb.tmp && mv Formula/cs.rb.tmp Formula/cs.rb
 
       - name: Commit and push homebrew update
         env:
@@ -202,10 +202,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet homebrew/Formula/cs.rb; then
+          if git diff --quiet Formula/cs.rb; then
             echo "No changes to homebrew formula"
           else
-            git add homebrew/Formula/cs.rb
+            git add Formula/cs.rb
             git commit -m "chore: update homebrew formula for $VERSION"
             git push origin main
           fi
