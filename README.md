@@ -159,12 +159,12 @@ chmod +x cs && mv cs /usr/local/bin/
 ### Homebrew (macOS/Linux)
 
 ```bash
-# One-liner (recommended)
-brew install bikramtuladhar/claude-code-resumer/cs
-
-# Or tap first, then install
-brew tap bikramtuladhar/claude-code-resumer
+# Tap with explicit URL (repo doesn't use homebrew- prefix)
+brew tap bikramtuladhar/cs https://github.com/bikramtuladhar/claude-code-resumer
 brew install cs
+
+# Or direct formula install (no tap needed)
+brew install --formula https://raw.githubusercontent.com/bikramtuladhar/claude-code-resumer/main/Formula/cs.rb
 ```
 
 ### Build from Source
