@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0](https://github.com/bikramtuladhar/claude-code-resumer/compare/v0.1.0...v0.2.0) (2026-01-17)
+
+
+### Features
+
+* add Formula symlink for direct homebrew tap support ([491af17](https://github.com/bikramtuladhar/claude-code-resumer/commit/491af1795719fe3f8dfa99788d094686305b798c))
+* add self-update command and Claude CLI detection ([9121f75](https://github.com/bikramtuladhar/claude-code-resumer/commit/9121f75936f5eaa3edd2daf0acd01cc68f02e836))
+
 ## 0.1.0 (2026-01-17)
 
 
