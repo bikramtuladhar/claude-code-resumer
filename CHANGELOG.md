@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2](https://github.com/bikramtuladhar/claude-code-resumer/compare/v0.1.1...v0.1.2) (2026-01-17)
+
+
+### Bug Fixes
+
+* simplify homebrew structure and update to v0.1.1 ([455bd23](https://github.com/bikramtuladhar/claude-code-resumer/commit/455bd23d027ff7d3e7738d489b220708e3c8104b))
+* simplify homebrew structure and update to v0.1.1 ([75cab2a](https://github.com/bikramtuladhar/claude-code-resumer/commit/75cab2a96d8d9167a9905b31c04fc140dd93fe16))
+
 ## 0.1.0 (2026-01-17)
 
 
