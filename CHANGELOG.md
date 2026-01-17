@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-01-17
+
+### Fixed
+- Fixed release tagging and versioning process
+
 ## [1.2.0] - 2026-01-17
 
 ### Added
@@ -43,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session database is a simple newline-delimited text file
 - Replaces current process when launching Claude (Unix)
 
-[Unreleased]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/bikramtuladhar/claude-code-resumer/releases/tag/v1.0.0
