@@ -21,6 +21,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Update Cargo.toml version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          VERSION_NUM="${VERSION#v}"
+          sed -i "s/^version = \".*\"/version = \"$VERSION_NUM\"/" Cargo.toml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if ! git diff --quiet Cargo.toml; then
+            git add Cargo.toml
+            git commit -m "chore: bump version to $VERSION_NUM"
+            git push origin main
+          fi
+
       - name: Create tag and release
         env:
           GH_TOKEN: ${{ github.token }}
