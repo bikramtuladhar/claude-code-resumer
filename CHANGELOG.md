@@ -21,5 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Homebrew formula for easy installation
 - GitHub Actions workflow for automated release builds
 - Unit tests for core functionality
+- Release Please integration for automated releases from conventional commits
+- Auto-generated changelogs from commit messages
+- Automatic Homebrew formula SHA256 hash updates after releases
+- Non-interactive mode (`-y`) for release script
+- Reusable GitHub Actions build workflow
 
 [Unreleased]: https://github.com/bikramtuladhar/claude-code-resumer/commits/main

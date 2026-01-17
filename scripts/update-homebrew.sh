@@ -1,5 +1,11 @@
 #!/bin/bash
-# Script to update Homebrew formula SHA256 hashes after a release
+# DEPRECATED: This script is no longer needed!
+#
+# The GitHub Actions build workflow now automatically updates the
+# homebrew formula with SHA256 hashes after each release.
+#
+# This script is kept for manual use cases only.
+#
 # Usage: ./scripts/update-homebrew.sh <version> <github-username>
 # Example: ./scripts/update-homebrew.sh 1.0.0 bikramtuladhar
 

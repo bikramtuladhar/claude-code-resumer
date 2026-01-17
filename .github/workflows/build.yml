@@ -1,0 +1,211 @@
+# Reusable workflow for building release binaries
+name: Build Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # macOS
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: cs-macos-intel
+            use_cross: false
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: cs-macos-arm64
+            use_cross: false
+
+          # Linux (glibc)
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: cs-linux-x64
+            use_cross: false
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: cs-linux-arm64
+            use_cross: true
+
+          # Linux (musl - static, for iSH/Alpine)
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            name: cs-linux-x64-musl
+            use_cross: true
+          - target: i686-unknown-linux-musl
+            os: ubuntu-latest
+            name: cs-linux-i686-musl
+            use_cross: true
+
+          # Android (Termux)
+          - target: aarch64-linux-android
+            os: ubuntu-latest
+            name: cs-android-arm64
+            use_cross: true
+          - target: armv7-linux-androideabi
+            os: ubuntu-latest
+            name: cs-android-arm32
+            use_cross: true
+          - target: x86_64-linux-android
+            os: ubuntu-latest
+            name: cs-android-x64
+            use_cross: true
+
+          # FreeBSD
+          - target: x86_64-unknown-freebsd
+            os: ubuntu-latest
+            name: cs-freebsd-x64
+            use_cross: true
+
+          # Windows
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            name: cs-windows-x64.exe
+            use_cross: false
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            name: cs-windows-arm64.exe
+            use_cross: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross
+        if: matrix.use_cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build with cross
+        if: matrix.use_cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Build with cargo
+        if: "!matrix.use_cross"
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Rename binary (Unix)
+        if: "!contains(matrix.target, 'windows')"
+        run: |
+          cp target/${{ matrix.target }}/release/cs ${{ matrix.name }}
+
+      - name: Rename binary (Windows)
+        if: contains(matrix.target, 'windows')
+        shell: pwsh
+        run: |
+          Copy-Item "target/${{ matrix.target }}/release/cs.exe" "${{ matrix.name }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}
+
+  upload-assets:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload Release Assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          # Upload all binaries to the release
+          for file in artifacts/*/*; do
+            echo "Uploading $file..."
+            gh release upload "$VERSION" "$file" --clobber
+          done
+
+  update-homebrew:
+    needs: upload-assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Calculate SHA256 and update formula
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          VERSION_NUM="${VERSION#v}"
+
+          # Download binaries and calculate SHA256
+          gh release download "$VERSION" -p "cs-macos-arm64" -D /tmp
+          gh release download "$VERSION" -p "cs-macos-intel" -D /tmp
+          gh release download "$VERSION" -p "cs-linux-arm64" -D /tmp
+          gh release download "$VERSION" -p "cs-linux-x64" -D /tmp
+
+          SHA_MACOS_ARM64=$(sha256sum /tmp/cs-macos-arm64 | cut -d' ' -f1)
+          SHA_MACOS_INTEL=$(sha256sum /tmp/cs-macos-intel | cut -d' ' -f1)
+          SHA_LINUX_ARM64=$(sha256sum /tmp/cs-linux-arm64 | cut -d' ' -f1)
+          SHA_LINUX_X64=$(sha256sum /tmp/cs-linux-x64 | cut -d' ' -f1)
+
+          echo "SHA256 hashes:"
+          echo "  macOS ARM64: $SHA_MACOS_ARM64"
+          echo "  macOS Intel: $SHA_MACOS_INTEL"
+          echo "  Linux ARM64: $SHA_LINUX_ARM64"
+          echo "  Linux x64:   $SHA_LINUX_X64"
+
+          # Update the homebrew formula
+          sed -i "s/version \".*\"/version \"$VERSION_NUM\"/" homebrew/Formula/cs.rb
+          sed -i "s/SHA256_MACOS_ARM64/$SHA_MACOS_ARM64/" homebrew/Formula/cs.rb
+          sed -i "s/SHA256_MACOS_INTEL/$SHA_MACOS_INTEL/" homebrew/Formula/cs.rb
+          sed -i "s/SHA256_LINUX_ARM64/$SHA_LINUX_ARM64/" homebrew/Formula/cs.rb
+          sed -i "s/SHA256_LINUX_X64/$SHA_LINUX_X64/" homebrew/Formula/cs.rb
+
+          # Also handle if SHA256 was already a hash (for updates)
+          sed -i "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"NEW_HASH\"/g" homebrew/Formula/cs.rb
+
+          # Re-insert the correct hashes in order (macOS ARM, macOS Intel, Linux ARM, Linux x64)
+          # This is done with a temp file approach to handle the ordering
+          awk -v arm="$SHA_MACOS_ARM64" -v intel="$SHA_MACOS_INTEL" -v larm="$SHA_LINUX_ARM64" -v lx64="$SHA_LINUX_X64" '
+            BEGIN { count = 0 }
+            /sha256 "NEW_HASH"/ {
+              count++
+              if (count == 1) sub(/NEW_HASH/, arm)
+              else if (count == 2) sub(/NEW_HASH/, intel)
+              else if (count == 3) sub(/NEW_HASH/, larm)
+              else if (count == 4) sub(/NEW_HASH/, lx64)
+            }
+            { print }
+          ' homebrew/Formula/cs.rb > homebrew/Formula/cs.rb.tmp && mv homebrew/Formula/cs.rb.tmp homebrew/Formula/cs.rb
+
+      - name: Commit and push homebrew update
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet homebrew/Formula/cs.rb; then
+            echo "No changes to homebrew formula"
+          else
+            git add homebrew/Formula/cs.rb
+            git commit -m "chore: update homebrew formula for $VERSION"
+            git push origin main
+          fi

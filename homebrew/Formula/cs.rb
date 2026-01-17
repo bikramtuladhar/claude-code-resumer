@@ -4,7 +4,9 @@
 class Cs < Formula
   desc "Claude Code Session Manager - deterministic sessions based on folder+branch"
   homepage "https://github.com/bikramtuladhar/claude-code-resumer"
+  # x-release-please-start-version
   version "0.0.0"
+  # x-release-please-end
   license "MIT"
 
   on_macos do
