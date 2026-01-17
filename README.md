@@ -159,7 +159,11 @@ chmod +x cs && mv cs /usr/local/bin/
 ### Homebrew (macOS/Linux)
 
 ```bash
-brew tap bikramtuladhar/tap
+# One-liner (recommended)
+brew install bikramtuladhar/claude-code-resumer/cs
+
+# Or tap first, then install
+brew tap bikramtuladhar/claude-code-resumer
 brew install cs
 ```
 
