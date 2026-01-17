@@ -5,9 +5,8 @@ A lightweight CLI tool that creates deterministic Claude Code sessions based on 
 ## Quick Start
 
 ```bash
-# Install (macOS Apple Silicon)
-curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-macos-arm64 -o cs
-chmod +x cs && sudo mv cs /usr/local/bin/
+# One-line install (works on macOS, Linux, FreeBSD, Android Termux, iOS iSH)
+curl -fsSL https://raw.githubusercontent.com/bikramtuladhar/claude-code-resumer/main/install.sh | bash
 
 # Use it
 cd ~/projects/my-app
@@ -32,29 +31,91 @@ Claude Code's `--resume` flag opens an interactive picker if the session doesn't
 - **Zero configuration** - Just run `cs` in any git repository
 - **Session management** - Force create, reset stale sessions, list/clear database
 - **Custom namespaces** - Isolate session pools via `CS_NAMESPACE` env var
-- **Cross-platform** - macOS (Intel & Apple Silicon) and Linux
+- **Cross-platform** - macOS, Linux, FreeBSD, Android (Termux), iOS (iSH)
 - **Fast** - Native Rust binary, ~330KB, instant startup
 
 ## Installation
 
-### Direct Download
+### Automatic Installation (Recommended)
+
+The installer automatically detects your platform and installs the correct binary:
 
 ```bash
-# macOS (Apple Silicon)
+curl -fsSL https://raw.githubusercontent.com/bikramtuladhar/claude-code-resumer/main/install.sh | bash
+```
+
+**Supported platforms:**
+- macOS (Intel & Apple Silicon)
+- Linux (x64 & ARM64)
+- FreeBSD (x64)
+- Android Termux (ARM64, ARM32, x64)
+- iOS iSH (i686)
+
+### Manual Download
+
+#### macOS
+
+```bash
+# Apple Silicon (M1/M2/M3)
 curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-macos-arm64 -o cs
 chmod +x cs && sudo mv cs /usr/local/bin/
 
-# macOS (Intel)
+# Intel
 curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-macos-intel -o cs
 chmod +x cs && sudo mv cs /usr/local/bin/
+```
 
-# Linux (x64)
+#### Linux
+
+```bash
+# x64 (glibc)
 curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-linux-x64 -o cs
 chmod +x cs && sudo mv cs /usr/local/bin/
 
-# Linux (ARM64)
+# ARM64 (glibc)
 curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-linux-arm64 -o cs
 chmod +x cs && sudo mv cs /usr/local/bin/
+
+# x64 (musl/Alpine)
+curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-linux-x64-musl -o cs
+chmod +x cs && sudo mv cs /usr/local/bin/
+
+# i686 (musl/Alpine)
+curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-linux-i686-musl -o cs
+chmod +x cs && sudo mv cs /usr/local/bin/
+```
+
+#### FreeBSD
+
+```bash
+# x64
+curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-freebsd-x64 -o cs
+chmod +x cs && sudo mv cs /usr/local/bin/
+```
+
+#### Android (Termux)
+
+```bash
+# ARM64 (most Android devices)
+curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-android-arm64 -o cs
+chmod +x cs && mv cs $PREFIX/bin/
+
+# ARM32 (older devices)
+curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-android-arm32 -o cs
+chmod +x cs && mv cs $PREFIX/bin/
+
+# x64 (emulators)
+curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-android-x64 -o cs
+chmod +x cs && mv cs $PREFIX/bin/
+```
+
+#### iOS (iSH)
+
+iSH is an x86 Linux emulator for iOS. Use the musl-linked i686 binary:
+
+```bash
+curl -L https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/cs-linux-i686-musl -o cs
+chmod +x cs && mv cs /usr/local/bin/
 ```
 
 ### Homebrew (macOS/Linux)
@@ -160,6 +221,24 @@ cs
 - `--force` skips the DB check entirely, always creates
 - `--reset` removes any existing DB entry first, then creates
 
+## Platform-Specific Notes
+
+### Android (Termux)
+
+1. Install [Termux](https://termux.dev/) from F-Droid (not Play Store)
+2. Install dependencies: `pkg install git curl`
+3. Run the install script or download the Android binary manually
+
+### iOS (iSH)
+
+1. Install [iSH](https://ish.app/) from the App Store
+2. Install dependencies: `apk add git curl bash`
+3. Run the install script or download the i686-musl binary manually
+
+### FreeBSD
+
+Ensure you have `curl` installed: `pkg install curl`
+
 ## Troubleshooting
 
 ### "No conversation found" error
@@ -183,6 +262,23 @@ cs --reset   # Removes from DB, then creates new
 ```bash
 cs --list    # List all sessions in database
 cs --clear   # Clear entire session database
+```
+
+### Binary not found after installation
+
+Make sure the installation directory is in your PATH:
+
+```bash
+# For ~/.local/bin (common on Linux)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# For Termux
+# $PREFIX/bin should already be in PATH
+
+# For iSH
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.profile
+source ~/.profile
 ```
 
 ## Configuration
@@ -215,6 +311,21 @@ export CS_NAMESPACE="22222222-2222-2222-2222-222222222222"
 
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and in PATH
 - Git repository (for branch detection)
+
+## Available Binaries
+
+| Platform | Architecture | Binary Name |
+|----------|--------------|-------------|
+| macOS | Apple Silicon (M1/M2/M3) | `cs-macos-arm64` |
+| macOS | Intel | `cs-macos-intel` |
+| Linux | x64 (glibc) | `cs-linux-x64` |
+| Linux | ARM64 (glibc) | `cs-linux-arm64` |
+| Linux | x64 (musl) | `cs-linux-x64-musl` |
+| Linux | i686 (musl) | `cs-linux-i686-musl` |
+| FreeBSD | x64 | `cs-freebsd-x64` |
+| Android | ARM64 | `cs-android-arm64` |
+| Android | ARM32 | `cs-android-arm32` |
+| Android | x64 | `cs-android-x64` |
 
 ## Development
 
