@@ -197,6 +197,181 @@ fn get_folder_name() -> Result<String, String> {
         .ok_or_else(|| "Failed to get folder name".to_string())
 }
 
+/// Get the binary name for current platform
+fn get_binary_name() -> Option<&'static str> {
+    #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+    return Some("cs-windows-x64.exe");
+    #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
+    return Some("cs-windows-arm64.exe");
+
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    return Some("cs-macos-arm64");
+    #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+    return Some("cs-macos-intel");
+
+    #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
+    return Some("cs-linux-x64");
+    #[cfg(all(target_os = "linux", target_arch = "aarch64", target_env = "gnu"))]
+    return Some("cs-linux-arm64");
+    #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "musl"))]
+    return Some("cs-linux-x64-musl");
+    #[cfg(all(target_os = "linux", target_arch = "x86", target_env = "musl"))]
+    return Some("cs-linux-i686-musl");
+
+    #[cfg(all(target_os = "freebsd", target_arch = "x86_64"))]
+    return Some("cs-freebsd-x64");
+
+    #[cfg(all(target_os = "android", target_arch = "aarch64"))]
+    return Some("cs-android-arm64");
+    #[cfg(all(target_os = "android", target_arch = "arm"))]
+    return Some("cs-android-arm32");
+    #[cfg(all(target_os = "android", target_arch = "x86_64"))]
+    return Some("cs-android-x64");
+
+    #[allow(unreachable_code)]
+    None
+}
+
+/// Get the path to the current executable
+fn get_current_exe_path() -> Result<PathBuf, String> {
+    env::current_exe().map_err(|e| format!("Failed to get current executable path: {}", e))
+}
+
+/// Perform self-update by downloading latest release from GitHub
+fn self_update() -> Result<(), String> {
+    let binary_name = get_binary_name()
+        .ok_or_else(|| "Unsupported platform for auto-update".to_string())?;
+
+    let download_url = format!(
+        "https://github.com/bikramtuladhar/claude-code-resumer/releases/latest/download/{}",
+        binary_name
+    );
+
+    let current_exe = get_current_exe_path()?;
+    let current_version = env!("CS_VERSION");
+
+    println!("cs self-update");
+    println!("──────────────────────────────────────────────");
+    println!("Current version: {}", current_version);
+    println!("Binary: {}", binary_name);
+    println!("Downloading from: {}", download_url);
+    println!();
+
+    // Create temp file path
+    let temp_path = current_exe.with_extension("new");
+
+    // Download using platform-appropriate method
+    #[cfg(windows)]
+    let download_result = download_windows(&download_url, &temp_path);
+    #[cfg(not(windows))]
+    let download_result = download_unix(&download_url, &temp_path);
+
+    download_result?;
+
+    // Verify the download succeeded and file exists
+    if !temp_path.exists() {
+        return Err("Download failed: file not created".to_string());
+    }
+
+    // Make executable on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&temp_path)
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&temp_path, perms)
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+
+    // Replace the current binary
+    // On Windows, we can't replace a running executable directly
+    #[cfg(windows)]
+    {
+        let backup_path = current_exe.with_extension("old");
+        // Remove old backup if exists
+        let _ = fs::remove_file(&backup_path);
+        // Rename current to backup
+        fs::rename(&current_exe, &backup_path)
+            .map_err(|e| format!("Failed to backup current binary: {}", e))?;
+        // Rename new to current
+        fs::rename(&temp_path, &current_exe)
+            .map_err(|e| format!("Failed to install new binary: {}", e))?;
+        // Remove backup
+        let _ = fs::remove_file(&backup_path);
+    }
+
+    #[cfg(not(windows))]
+    {
+        fs::rename(&temp_path, &current_exe)
+            .map_err(|e| format!("Failed to replace binary: {}", e))?;
+    }
+
+    println!("✓ Successfully updated!");
+    println!();
+    println!("Run 'cs --version' to verify the new version.");
+
+    Ok(())
+}
+
+/// Download file using curl or wget (Unix)
+#[cfg(not(windows))]
+fn download_unix(url: &str, dest: &std::path::Path) -> Result<(), String> {
+    // Try curl first
+    let curl_result = Command::new("curl")
+        .args(["-fsSL", "-o"])
+        .arg(dest)
+        .arg(url)
+        .output();
+
+    if let Ok(output) = curl_result {
+        if output.status.success() {
+            return Ok(());
+        }
+    }
+
+    // Fall back to wget
+    let wget_result = Command::new("wget")
+        .args(["-q", "-O"])
+        .arg(dest)
+        .arg(url)
+        .output();
+
+    match wget_result {
+        Ok(output) if output.status.success() => Ok(()),
+        Ok(output) => Err(format!(
+            "Download failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )),
+        Err(_) => Err("Neither curl nor wget available for download".to_string()),
+    }
+}
+
+/// Download file using PowerShell (Windows)
+#[cfg(windows)]
+fn download_windows(url: &str, dest: &std::path::Path) -> Result<(), String> {
+    let dest_str = dest.to_string_lossy();
+    let ps_command = format!(
+        "Invoke-WebRequest -Uri '{}' -OutFile '{}' -UseBasicParsing",
+        url, dest_str
+    );
+
+    let result = Command::new("powershell")
+        .args(["-NoProfile", "-Command", &ps_command])
+        .output()
+        .map_err(|e| format!("Failed to run PowerShell: {}", e))?;
+
+    if result.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "Download failed: {}",
+            String::from_utf8_lossy(&result.stderr)
+        ))
+    }
+}
+
 fn print_help() {
     eprintln!("cs - Claude Code Session Manager");
     eprintln!();
@@ -208,6 +383,7 @@ fn print_help() {
     eprintln!("    cs --list       List all sessions in database");
     eprintln!("    cs --clear      Clear entire session database");
     eprintln!("    cs --dry-run    Show session info without launching Claude");
+    eprintln!("    cs upgrade      Update cs to the latest version");
     eprintln!("    cs --help       Show this help message");
     eprintln!("    cs --version    Show version");
     eprintln!();
@@ -218,6 +394,7 @@ fn print_help() {
     eprintln!("    -n              Same as --dry-run");
     eprintln!("    -h              Same as --help");
     eprintln!("    -v              Same as --version");
+    eprintln!("    -U              Same as upgrade");
     eprintln!();
     eprintln!("SESSION FORMAT:");
     eprintln!("    <folder>+<branch> -> deterministic UUID v5");
@@ -264,6 +441,15 @@ fn main() {
             "--clear" => {
                 clear_sessions();
                 return;
+            }
+            "upgrade" | "-U" => {
+                match self_update() {
+                    Ok(_) => return,
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        exit(1);
+                    }
+                }
             }
             "--dry-run" | "-n" => {
                 dry_run = true;
@@ -359,10 +545,48 @@ fn main() {
     launch_claude(&claude_args);
 }
 
+/// Check if claude CLI is installed
+fn check_claude_installed() -> bool {
+    #[cfg(windows)]
+    let check_cmd = Command::new("where").arg("claude").output();
+    #[cfg(not(windows))]
+    let check_cmd = Command::new("which").arg("claude").output();
+
+    match check_cmd {
+        Ok(output) => output.status.success(),
+        Err(_) => false,
+    }
+}
+
+/// Print error message when Claude CLI is not found
+fn print_claude_not_found_error() {
+    eprintln!("Error: Claude CLI not found in PATH");
+    eprintln!();
+    eprintln!("Claude Code CLI must be installed to use cs.");
+    eprintln!();
+    eprintln!("Install Claude Code:");
+    eprintln!("  npm install -g @anthropic-ai/claude-code");
+    eprintln!();
+    eprintln!("Or visit: https://docs.anthropic.com/en/docs/claude-code");
+}
+
 /// Launch claude with the given arguments (Unix version - replaces current process)
 #[cfg(unix)]
 fn launch_claude(args: &[&str]) -> ! {
+    // Check if claude exists before replacing the process
+    if !check_claude_installed() {
+        print_claude_not_found_error();
+        exit(127);
+    }
+
     let err = Command::new("claude").args(args).exec();
+
+    // If we get here, the exec call failed
+    if err.kind() == std::io::ErrorKind::NotFound {
+        print_claude_not_found_error();
+        exit(127);
+    }
+
     eprintln!("Error launching claude: {}", err);
     exit(1);
 }
@@ -381,6 +605,10 @@ fn launch_claude(args: &[&str]) -> ! {
             }
         }
         Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                print_claude_not_found_error();
+                exit(127);
+            }
             eprintln!("Error launching claude: {}", e);
             exit(1);
         }

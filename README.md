@@ -219,6 +219,7 @@ cs
 | `cs --list` | `-l` | List all sessions in database |
 | `cs --clear` | | Clear entire session database |
 | `cs --dry-run` | `-n` | Show session info without launching Claude |
+| `cs upgrade` | `-U` | Update cs to the latest version |
 | `cs --help` | `-h` | Show help message |
 | `cs --version` | `-v` | Show version |
 
@@ -288,7 +289,31 @@ cs
 
 Ensure you have `curl` installed: `pkg install curl`
 
+## Updating
+
+Update cs to the latest version with a single command:
+
+```bash
+cs upgrade
+```
+
+This downloads the appropriate binary for your platform from GitHub releases and replaces the current installation.
+
 ## Troubleshooting
+
+### "Claude CLI not found" error
+
+This means Claude Code CLI is not installed or not in your PATH:
+
+```bash
+# Install Claude Code CLI
+npm install -g @anthropic-ai/claude-code
+
+# Verify installation
+claude --version
+```
+
+For more info: https://docs.anthropic.com/en/docs/claude-code
 
 ### "No conversation found" error
 
