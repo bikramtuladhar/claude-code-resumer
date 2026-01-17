@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-01-16
+
+### Fixed
+- Fixed release workflow: changed `dtolnay/rust-action` to correct `dtolnay/rust-toolchain`
+
+### Added
+- CI workflow that runs tests on all pull requests before merge
+- Cargo caching in CI for faster builds
+
 ## [1.0.0] - 2025-01-16
 
 ### Added
@@ -29,5 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session database is a simple newline-delimited text file
 - Replaces current process when launching Claude (Unix)
 
-[Unreleased]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/bikramtuladhar/claude-code-resumer/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/bikramtuladhar/claude-code-resumer/releases/tag/v1.0.0
