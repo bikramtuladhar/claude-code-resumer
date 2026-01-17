@@ -1,5 +1,12 @@
 # cs - Claude Code Session Manager
 
+[![CI](https://github.com/bikramtuladhar/claude-code-resumer/actions/workflows/ci.yml/badge.svg)](https://github.com/bikramtuladhar/claude-code-resumer/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/bikramtuladhar/claude-code-resumer)](https://github.com/bikramtuladhar/claude-code-resumer/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/bikramtuladhar/claude-code-resumer/total)](https://github.com/bikramtuladhar/claude-code-resumer/releases)
+[![License](https://img.shields.io/github/license/bikramtuladhar/claude-code-resumer)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-2021-orange)](https://www.rust-lang.org/)
+[![Platforms](https://img.shields.io/badge/platforms-windows%20%7C%20macos%20%7C%20linux%20%7C%20android%20%7C%20freebsd-blue)](README.md#available-binaries)
+
 A lightweight CLI tool that creates deterministic Claude Code sessions based on your current folder and git branch. Same folder + same branch = same session, always.
 
 ## Quick Start
