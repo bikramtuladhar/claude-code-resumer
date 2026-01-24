@@ -10,6 +10,56 @@ use std::process::{Command, exit};
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 
+/// Claude CLI boolean flags (no value required)
+const CLAUDE_BOOL_FLAGS: &[&str] = &[
+    "--allow-dangerously-skip-permissions",
+    "--chrome",
+    "-c", "--continue",
+    "--dangerously-skip-permissions",
+    "--disable-slash-commands",
+    "--fork-session",
+    "--ide",
+    "--include-partial-messages",
+    "--mcp-debug",
+    "--no-chrome",
+    "--no-session-persistence",
+    "-p", "--print",
+    "--replay-user-messages",
+    "--strict-mcp-config",
+    "--verbose",
+];
+
+/// Claude CLI options that take a value
+const CLAUDE_VALUE_FLAGS: &[&str] = &[
+    "--add-dir",
+    "--agent",
+    "--agents",
+    "--allowed-tools", "--allowedTools",
+    "--append-system-prompt",
+    "--betas",
+    "-d", "--debug",
+    "--disallowed-tools", "--disallowedTools",
+    "--fallback-model",
+    "--file",
+    "--input-format",
+    "--json-schema",
+    "--max-budget-usd",
+    "--mcp-config",
+    "--model",
+    "--output-format",
+    "--permission-mode",
+    "--plugin-dir",
+    "--setting-sources",
+    "--settings",
+    "--system-prompt",
+    "--tools",
+];
+
+/// Claude CLI subcommands (bypass session logic entirely)
+const CLAUDE_SUBCOMMANDS: &[&str] = &[
+    "doctor", "install", "mcp", "plugin", "setup-token", "update",
+];
+
 /// Default UUID v5 namespace (DNS namespace from RFC 4122)
 const DEFAULT_NAMESPACE: [u8; 16] = [
     0x6b, 0xa7, 0xb8, 0x10,
@@ -396,6 +446,16 @@ fn print_help() {
     eprintln!("    -v              Same as --version");
     eprintln!("    -U              Same as upgrade");
     eprintln!();
+    eprintln!("CLAUDE CODE OPTIONS:");
+    eprintln!("    All Claude Code CLI options are passed through:");
+    eprintln!("    --chrome, --model <m>, --verbose, -c, -p, etc.");
+    eprintln!();
+    eprintln!("EXAMPLES:");
+    eprintln!("    cs --chrome              # Enable Chrome integration");
+    eprintln!("    cs --model opus          # Use opus model");
+    eprintln!("    cs -f --verbose          # Force new session + verbose mode");
+    eprintln!("    cs doctor                # Run claude doctor (bypass session)");
+    eprintln!();
     eprintln!("SESSION FORMAT:");
     eprintln!("    <folder>+<branch> -> deterministic UUID v5");
     eprintln!("    Example: my-project+feature/auth -> 4b513bfa-8c71-512b-...");
@@ -422,10 +482,21 @@ fn main() {
     let mut force_create = false;
     let mut reset_mode = false;
     let mut resume_mode = false;
+    let mut passthrough_args: Vec<String> = Vec::new();
 
-    // Handle flags
-    if args.len() > 1 {
-        match args[1].as_str() {
+    // Check for Claude subcommands first - pass entire command through (bypass session logic)
+    if args.len() > 1 && CLAUDE_SUBCOMMANDS.contains(&args[1].as_str()) {
+        let claude_args: Vec<String> = args[1..].to_vec();
+        launch_claude_owned(claude_args);
+    }
+
+    // Parse arguments with index-based loop to handle value flags
+    let mut i = 1;
+    while i < args.len() {
+        let arg = &args[i];
+
+        match arg.as_str() {
+            // cs-specific flags (early exit)
             "--help" | "-h" => {
                 print_help();
                 return;
@@ -451,6 +522,8 @@ fn main() {
                     }
                 }
             }
+
+            // cs-specific mode flags
             "--dry-run" | "-n" => {
                 dry_run = true;
             }
@@ -463,12 +536,58 @@ fn main() {
             "--resume" | "-R" => {
                 resume_mode = true;
             }
-            arg => {
+
+            // Blocked flags (conflict with cs session management)
+            "--session-id" => {
+                eprintln!("Error: '--session-id' conflicts with cs session management");
+                eprintln!("cs automatically manages session IDs based on folder+branch");
+                exit(1);
+            }
+
+            // Check for Claude boolean flags
+            _ if CLAUDE_BOOL_FLAGS.contains(&arg.as_str()) => {
+                passthrough_args.push(arg.clone());
+            }
+
+            // Check for Claude value flags
+            _ if CLAUDE_VALUE_FLAGS.contains(&arg.as_str()) => {
+                passthrough_args.push(arg.clone());
+                i += 1;
+                if i < args.len() {
+                    passthrough_args.push(args[i].clone());
+                } else {
+                    eprintln!("Error: '{}' requires a value", arg);
+                    exit(1);
+                }
+            }
+
+            // Handle --flag=value syntax
+            _ if arg.contains('=') => {
+                let key = arg.split('=').next().unwrap();
+                if CLAUDE_VALUE_FLAGS.contains(&key) || CLAUDE_BOOL_FLAGS.contains(&key) {
+                    passthrough_args.push(arg.clone());
+                } else {
+                    eprintln!("Unknown argument: {}", arg);
+                    eprintln!("Run 'cs --help' for cs options");
+                    eprintln!("Run 'claude --help' for Claude options");
+                    exit(1);
+                }
+            }
+
+            // Positional argument (prompt) - pass through to Claude
+            _ if !arg.starts_with('-') => {
+                passthrough_args.push(arg.clone());
+            }
+
+            // Unknown flag
+            _ => {
                 eprintln!("Unknown argument: {}", arg);
-                eprintln!("Run 'cs --help' for usage");
+                eprintln!("Run 'cs --help' for cs options");
+                eprintln!("Run 'claude --help' for Claude options");
                 exit(1);
             }
         }
+        i += 1;
     }
 
     // Get folder name
@@ -523,26 +642,32 @@ fn main() {
 
     // Check for dry-run
     if dry_run {
+        if !passthrough_args.is_empty() {
+            println!("Passthrough args: {:?}", passthrough_args);
+        }
         return;
     }
 
     // Determine which arguments to use
-    let claude_args: Vec<&str> = if resume_mode {
+    let mut claude_args: Vec<String> = if resume_mode {
         println!("Resuming session (with picker fallback)...");
-        vec!["--resume", &session_uuid]
+        vec!["--resume".to_string(), session_uuid.clone()]
     } else if force_create || reset_mode || !session_exists {
         if !session_exists {
             save_session(&session_uuid);
         }
         println!("Creating session...");
-        vec!["--session-id", &session_uuid]
+        vec!["--session-id".to_string(), session_uuid.clone()]
     } else {
         println!("Resuming session...");
-        vec!["-r", &session_uuid]
+        vec!["-r".to_string(), session_uuid.clone()]
     };
 
+    // Append passthrough args
+    claude_args.extend(passthrough_args);
+
     // Launch claude (platform-specific)
-    launch_claude(&claude_args);
+    launch_claude_owned(claude_args);
 }
 
 /// Check if claude CLI is installed
@@ -572,6 +697,7 @@ fn print_claude_not_found_error() {
 
 /// Launch claude with the given arguments (Unix version - replaces current process)
 #[cfg(unix)]
+#[allow(dead_code)]
 fn launch_claude(args: &[&str]) -> ! {
     // Check if claude exists before replacing the process
     if !check_claude_installed() {
@@ -591,10 +717,57 @@ fn launch_claude(args: &[&str]) -> ! {
     exit(1);
 }
 
+/// Launch claude with owned String arguments (Unix version)
+/// Uses exec() to replace the current process - args are passed as array, not shell string
+#[cfg(unix)]
+fn launch_claude_owned(args: Vec<String>) -> ! {
+    // Check if claude exists before replacing the process
+    if !check_claude_installed() {
+        print_claude_not_found_error();
+        exit(127);
+    }
+
+    let err = Command::new("claude").args(&args).exec();
+
+    // If we get here, the exec call failed
+    if err.kind() == std::io::ErrorKind::NotFound {
+        print_claude_not_found_error();
+        exit(127);
+    }
+
+    eprintln!("Error launching claude: {}", err);
+    exit(1);
+}
+
 /// Launch claude with the given arguments (Windows version - spawns child process)
 #[cfg(windows)]
+#[allow(dead_code)]
 fn launch_claude(args: &[&str]) -> ! {
     match Command::new("claude").args(args).spawn() {
+        Ok(mut child) => {
+            match child.wait() {
+                Ok(status) => exit(status.code().unwrap_or(0)),
+                Err(e) => {
+                    eprintln!("Error waiting for claude: {}", e);
+                    exit(1);
+                }
+            }
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                print_claude_not_found_error();
+                exit(127);
+            }
+            eprintln!("Error launching claude: {}", e);
+            exit(1);
+        }
+    }
+}
+
+/// Launch claude with owned String arguments (Windows version)
+#[cfg(windows)]
+fn launch_claude_owned(args: Vec<String>) -> ! {
+    match Command::new("claude").args(&args).spawn() {
         Ok(mut child) => {
             match child.wait() {
                 Ok(status) => exit(status.code().unwrap_or(0)),
