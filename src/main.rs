@@ -426,7 +426,7 @@ fn print_help() {
     eprintln!("cs - Claude Code Session Manager");
     eprintln!();
     eprintln!("USAGE:");
-    eprintln!("    cs              Start/resume session for current folder+branch");
+    eprintln!("    cs              Start/resume session (folder+branch or folder-only)");
     eprintln!("    cs --force      Force create new session (ignore database)");
     eprintln!("    cs --reset      Remove session from database and create new");
     eprintln!("    cs --resume     Resume using Claude's picker (fallback if not found)");
@@ -457,8 +457,10 @@ fn print_help() {
     eprintln!("    cs doctor                # Run claude doctor (bypass session)");
     eprintln!();
     eprintln!("SESSION FORMAT:");
-    eprintln!("    <folder>+<branch> -> deterministic UUID v5");
+    eprintln!("    Git repo:    <folder>+<branch> -> deterministic UUID v5");
+    eprintln!("    Non-git:     <folder> -> deterministic UUID v5 (folder-only)");
     eprintln!("    Example: my-project+feature/auth -> 4b513bfa-8c71-512b-...");
+    eprintln!("    Example: my-folder -> a1b2c3d4-e5f6-5789-...");
     eprintln!();
     eprintln!("TROUBLESHOOTING:");
     eprintln!("    If you see \"No conversation found\" error:");
@@ -599,17 +601,11 @@ fn main() {
         }
     };
 
-    // Get git branch
-    let branch_name = match get_git_branch() {
-        Ok(name) => name,
-        Err(e) => {
-            eprintln!("Error: {}", e);
-            exit(1);
-        }
+    // Get git branch (optional - fall back to folder-only if not in a git repo)
+    let (session_name, is_git_repo) = match get_git_branch() {
+        Ok(branch_name) => (format!("{}+{}", folder_name, branch_name), true),
+        Err(_) => (folder_name.clone(), false),
     };
-
-    // Create session name and UUID
-    let session_name = format!("{}+{}", folder_name, branch_name);
     let session_uuid = generate_uuid5(&session_name);
 
     // Handle reset mode: remove existing entry from database
@@ -637,6 +633,9 @@ fn main() {
     println!("│ Session: {}", session_name);
     println!("│ UUID:    {}", session_uuid);
     println!("│ Status:  {}", status_display);
+    if !is_git_repo {
+        println!("│ Note:    Not a git repo (folder-only mode)");
+    }
     println!("└─────────────────────────────────────────────");
     println!();
 
