@@ -1,6 +1,6 @@
 [package]
 name = "cs"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2021"
 description = "Claude Code Session Manager - deterministic sessions based on folder+branch"
 repository = "https://github.com/bikramtuladhar/claude-code-resumer"
